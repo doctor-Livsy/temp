@@ -73,7 +73,7 @@ class ClientsPool:
         return user_list, settings
 
     def add_client(self, user_id: str, api_key: str, s_key: str):
-        self.__clients[user_id] = {'CLIENT': BinanceClient(api_key, s_key)
+        self.__clients[user_id] = {'CLIENT': BinanceClient(api_key, s_key),
                                    'SETTINGS': {}}
 
     def get_client(self, user_id):
