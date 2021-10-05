@@ -1,0 +1,64 @@
+from aiogram import types
+from aiogram.dispatcher import FSMContext
+from aiogram.dispatcher.filters import Command
+from loader import dp, db, binance_pool, bybit_pool
+from keyboards.default import exchanges
+from aiogram.types import ReplyKeyboardRemove
+from states.states import DeleteParameters
+from .manage_trade_parameters import check_user_init, \
+                                     assemble_keyboard_trade_pairs
+
+
+@dp.message_handler(Command("delete_trade_parameters"))
+async def start_view_trade_parameters(message: types.Message):
+    # Запрос выбора биржи, если пройдена инициализация
+    if not await check_user_init(message):
+        await message.answer('Не пройдена инициализация.\n '
+                             'Для начала выполни команду start')
+    else:
+        await message.answer('Выбери биржу:', reply_markup=exchanges)
+        await DeleteParameters.to_select_parameters.set()
+
+
+@dp.message_handler(state=DeleteParameters.to_select_parameters)
+async def view_trade_parameters(message: types.message, state: FSMContext):
+    try:
+        # Запрос существующих параметров
+        list_pairs = await db.select_from_table('trade_pair', table='trade_parameters',
+                                                user_id=message.from_user.id,
+                                                exchange=message.text)
+        await message.answer(f'Выбери тикер для удаления:',
+                             reply_markup=assemble_keyboard_trade_pairs(list_pairs['trade_pair'], delete=True))
+        # Запись выбранной биржи
+        await state.update_data(exchange=message.text)
+        await DeleteParameters.to_delete_parameters.set()
+
+    except Exception:
+        await message.answer('Ошибка. Повтори команду.')
+        await state.reset_state()
+
+
+@dp.message_handler(state=DeleteParameters.to_delete_parameters)
+async def view_trade_parameters(message: types.message, state: FSMContext):
+    try:
+        # Название выранной на предыдущем шаге биржи
+        data = await state.get_data()
+        # Удаление записи
+        await db.delete_record(table='trade_parameters',
+                               user_id=message.from_user.id,
+                               exchange=data['exchange'],
+                               trade_pair=message.text)
+        # Отчет об удалении
+        ticker = message.text
+        await message.answer(f'Запись с параметрами {ticker} удалена',
+                             reply_markup=ReplyKeyboardRemove())
+
+        # Удаление записи из параметров клиента
+        pool = binance_pool if data['exchange'] == 'BINANCE' else bybit_pool
+        pool.delete_ticker_settings(user_id=message.from_user.id,
+                                    ticker=message.text)
+
+    except Exception:
+        await message.answer('Ошибка. Повтори команду.')
+        await state.reset_state()
+
