@@ -1,0 +1,14 @@
+from aiogram import types
+from aiogram.dispatcher import FSMContext
+from aiogram.dispatcher.filters import Command
+from loader import dp, db, binance_pool
+from api.BinanceTrader import BinanceFuturesTrader as Trader
+
+
+# Не забыть добавить команду в set.bot.commands
+@dp.message_handler(Command("debug_trade_command"))
+async def debug_trade_command(message: types.Message):
+    client = binance_pool.get_client(user_id=message.from_user.id)
+    trader = Trader(user_id=user_id,
+                    client=binance_pool.get_client(user_id=user_id),
+                    settings=binance_pool.get_user_settings(user_id=user_id))
