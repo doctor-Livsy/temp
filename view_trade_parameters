@@ -1,0 +1,44 @@
+from aiogram import types
+from aiogram.dispatcher import FSMContext
+from aiogram.dispatcher.filters import Command
+from loader import dp, db
+from keyboards.default import exchanges
+from aiogram.types import ReplyKeyboardRemove
+from states.states import ViewTradeParameters
+from .manage_trade_parameters import check_user_init
+from .useful_functions import dict_to_string
+
+
+@dp.message_handler(Command("view_trade_parameters"))
+async def start_view_trade_parameters(message: types.Message):
+    try:
+        # Запрос выбора биржи, если пройдена инициализация
+        if not await check_user_init(message):
+            await message.answer('Не пройдена инициализация.\n '
+                                 'Для начала выполни команду start')
+        else:
+            await message.answer('Выбери биржу:', reply_markup=exchanges)
+            await ViewTradeParameters.to_view_parameters.set()
+
+    except Exception:
+        await message.answer('Ошибка. Повтори команду.')
+
+
+@dp.message_handler(state=ViewTradeParameters.to_view_parameters)
+async def view_trade_parameters(message: types.message, state: FSMContext):
+    try:
+        # Запрос существующих параметров
+        parameters = await db.select_from_table('trade_pair', 'leverage',
+                                                'margin_value',
+                                                table='trade_parameters',
+                                                user_id=message.from_user.id,
+                                                exchange=message.text)
+        # Формирование текста с параметрами
+        text_parameters = dict_to_string(parameters)
+        # Вывод существующих параметров
+        await message.answer(f'Установлены следующие торговые параметры:\n'
+                             f'{text_parameters}', reply_markup=ReplyKeyboardRemove())
+
+    except Exception:
+        await message.answer('Ошибка. Повтори команду.')
+        await state.reset_state()
