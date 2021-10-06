@@ -1,0 +1,54 @@
+from aiogram import types
+from aiogram.dispatcher import FSMContext
+from aiogram.dispatcher.filters import Command
+from loader import dp, db
+from keyboards.default import exchanges
+from aiogram.types import ReplyKeyboardRemove
+from states.states import GetWebhookRequest
+
+
+
+def create_request(user_id, exchange):
+    import json
+    users = [user_id]
+
+    request = {'channel_post': {'text': 'tr_view_trade',
+                                'exchange': exchange.upper(),
+                                'users': users,
+                                'trade': {'side': '{{strategy.order.action}}',
+                                          'symbol': '{{ticker}}',
+                                          'price': '{{strategy.order.price}}',
+                                          'type': '{{strategy.order.comment}}'}}}
+
+    return json.dumps(request)
+
+
+@dp.message_handler(Command("get_webhook_request"))
+async def start_get_request(message: types.Message):
+    try:
+        from .manage_trade_parameters import check_user_init
+
+        # Запрос выбора биржи, если пройдена инициализация
+        if not await check_user_init(message):
+            await message.answer('Не пройдена инициализация.\n'
+                                 'Для начала выполни команду start')
+        else:
+            await message.answer('Выбери биржу:', reply_markup=exchanges)
+            await GetWebhookRequest.to_get_request.set()
+
+    except Exception:
+        await message.answer('Ошибка. Повтори команду.')
+
+
+@dp.message_handler(state=GetWebhookRequest.to_get_request)
+async def view_trade_parameters(message: types.message, state: FSMContext):
+    try:
+        request = create_request(user_id=mesage.from_user.id,
+                                 exchange=mesage.text)
+
+        await message.answer(request,
+                             reply_markup=ReplyKeyboardRemove())
+
+    except Exception:
+        await message.answer('Ошибка. Повтори команду.')
+        await state.reset_state()
