@@ -1,0 +1,27 @@
+from aiogram.dispatcher.filters.state import State, StatesGroup
+
+
+class RegisterExchange(StatesGroup):
+    waiting_api_key = State()
+    waiting_s_key = State()
+    enter_s_key = State()
+    create_client = State()
+
+
+class ManageTradeParameters(StatesGroup):
+    select_pair_for_editing = State()
+    insert_parameters = State()
+    writing_to_db = State()
+
+
+class ViewTradeParameters(StatesGroup):
+    to_view_parameters = State()
+
+
+class DeleteParameters(StatesGroup):
+    to_select_parameters = State()
+    to_delete_parameters = State()
+
+
+class GetWebhookRequest(StatesGroup):
+    to_get_request = State()
