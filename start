@@ -1,0 +1,14 @@
+from aiogram import types
+from aiogram.dispatcher.filters.builtin import CommandStart
+from loader import dp, db, binance_pool, bybit_pool
+
+
+@dp.message_handler(CommandStart())
+async def bot_start(message: types.Message):
+    await message.answer(f'Привет, {message.from_user.full_name}!')
+    
+    await db.add_user(user_id=message.from_user.id,
+                      user_name=message.from_user.username)
+    
+    binance_pool.client_start(message.from_user.id)
+    bybit_pool.client_start(message.from_user.id)
