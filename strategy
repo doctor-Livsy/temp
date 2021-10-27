@@ -1,0 +1,52 @@
+async def price_analyze(bnc, ftx, diff, margin):
+    """
+    The function compares prices and, if necessary, sends a trade command.
+    :param bnc: Binance update
+    :param ftx: FTX update
+    :param diff: min price differense to arbitrage
+    :param margin: margin value for trade
+    :return:
+    """
+    try:
+
+        if float(bnc['a']) - ftx['data']['bid'] > diff and \
+                check_volume(bnc['a'], bnc['A'],
+                             ftx['data']['bid'], ftx['data']['bidSize'],
+                             margin):
+            print('There is opportunity to arbitration.')
+            await binance_execute('BUY', margin)
+            await ftx_execute('SELL', margin)
+
+        elif ftx['data']['ask'] - float(bnc['b']) > diff and \
+                check_volume(bnc['a'], bnc['A'],
+                             ftx['data']['bid'], ftx['data']['bidSize'],
+                             margin):
+            print('There is opportunity to arbitration.')
+            await binance_execute('BUY', margin)
+            await ftx_execute('SELL', margin)
+
+        else:
+            print(bnc)
+            print(ftx)
+
+    except KeyError:
+        # because the first update contains headers
+        print('Starting observe')
+
+
+def check_volume(price_1, volume_1, price_2, volume_2, margin):
+    """Check sufficient volumes"""
+    if (price_1 * volume_1 > margin) and (price_2 * volume_2 > margin):
+        return True
+    else:
+        return False
+
+
+async def binance_execute(action, margin):
+    """Execute trade command..."""
+    print(f'===BINANCE {action}: {margin} pcs===')
+
+
+async def ftx_execute(action, margin):
+    """Execute trade command..."""
+    print(f'===FTX {action}: {margin} pcs===')
